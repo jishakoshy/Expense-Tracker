@@ -1,9 +1,13 @@
+// ExpenseTracker.tsx
 import React, { useReducer, useState, useMemo, useRef, useEffect } from 'react';
 
 type Expense = {
   id: number;
   amount: number;
   category: string;
+  date: string;
+  paymentMode: string;
+  notes?: string;
 };
 
 type State = {
@@ -21,15 +25,9 @@ const initialState: State = {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'ADD_EXPENSE':
-      return {
-        ...state,
-        expenses: [...state.expenses, action.payload],
-      };
+      return { ...state, expenses: [...state.expenses, action.payload] };
     case 'CLEAR_EXPENSES':
-      return {
-        ...state,
-        expenses: [],
-      };
+      return { ...state, expenses: [] };
     default:
       return state;
   }
@@ -39,7 +37,10 @@ const ExpenseTracker: React.FC = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
-  const [totalAmount, setTotalAmount] = useState(''); // 🆕 Total Available Amount
+  const [date, setDate] = useState('');
+  const [paymentMode, setPaymentMode] = useState('');
+  const [notes, setNotes] = useState('');
+  const [totalAmount, setTotalAmount] = useState('');
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -50,7 +51,7 @@ const ExpenseTracker: React.FC = () => {
   const highestExpense = useMemo(() => {
     return state.expenses.reduce(
       (prev, curr) => (curr.amount > prev.amount ? curr : prev),
-      { id: 0, amount: -Infinity, category: '' }
+      { id: 0, amount: -Infinity, category: '', date: '', paymentMode: '' }
     );
   }, [state.expenses]);
 
@@ -61,13 +62,19 @@ const ExpenseTracker: React.FC = () => {
 
   const handleAdd = () => {
     const amt = parseFloat(amount);
-    if (!amount || isNaN(amt) || amt <= 0 || category.trim() === '') return;
+    if (!amount || isNaN(amt) || amt <= 0 || category.trim() === '' || date.trim() === '' || paymentMode.trim() === '') return;
     dispatch({
       type: 'ADD_EXPENSE',
-      payload: { id: Date.now(), amount: amt, category },
+      payload: {
+        id: Date.now(),
+        amount: amt,
+        category,
+        date,
+        paymentMode,
+        notes: notes.trim() ? notes : undefined,
+      },
     });
-    setAmount('');
-    setCategory('');
+    setAmount(''); setCategory(''); setDate(''); setPaymentMode(''); setNotes('');
   };
 
   useEffect(() => {
@@ -75,12 +82,10 @@ const ExpenseTracker: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ maxWidth: 500, margin: '20px auto', padding: '20px', border: '1px solid black' }}>
+    <div className="tracker-container">
       <h2>Expense Tracker</h2>
-
-      {/* 🔵 Total Available Amount Input */}
-      <div>
-        <label>Total Available Amount: </label>
+      <div className="input-group">
+        <label>Total Available Amount:</label>
         <input
           type="number"
           value={totalAmount}
@@ -88,35 +93,52 @@ const ExpenseTracker: React.FC = () => {
           placeholder="Enter total budget"
         />
       </div>
+      <div className="total-summary">
+        <h3>Available: Rs.{parseFloat(totalAmount) || 0}</h3>
+        <h3>Spent: Rs.{totalSpent}</h3>
+        <h3>Remaining: Rs.{remainingAmount}</h3>
+      </div>
 
-      <h3>Total Available: ${parseFloat(totalAmount) || 0}</h3>
-      <h3>Total Spent: ${totalSpent}</h3>
-      <h3>Remaining Balance: ${remainingAmount}</h3>
-
-      <hr />
-
-      <div>
+      <div className="input-group">
         <input
           type="number"
           ref={inputRef}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          placeholder="Enter amount"
+          placeholder="Amount"
         />
         <input
           type="text"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          placeholder="Enter category"
+          placeholder="Category"
+        />
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <input
+          type="text"
+          value={paymentMode}
+          onChange={(e) => setPaymentMode(e.target.value)}
+          placeholder="Payment Mode"
+        />
+        <input
+          type="text"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Notes (optional)"
         />
         <button onClick={handleAdd}>Add Expense</button>
-        <button onClick={() => dispatch({ type: 'CLEAR_EXPENSES' })}>Clear Expenses</button>
+        <button onClick={() => dispatch({ type: 'CLEAR_EXPENSES' })}>Clear</button>
       </div>
 
-      <ul>
-        {state.expenses.map(exp => (
-          <li key={exp.id} style={{ backgroundColor: highestExpense?.id === exp.id ? '#caffbf' : 'white' }}>
-            {exp.category}: ${exp.amount}
+      <ul className="expense-list">
+        {state.expenses.map((exp) => (
+          <li
+            key={exp.id}
+            className={`expense-item ${highestExpense?.id === exp.id ? 'highest' : ''}`}
+          >
+            <strong>{exp.category}</strong>: Rs.{exp.amount}<br />
+            📅 {exp.date} | 💳 {exp.paymentMode}<br />
+            📝 {exp.notes || 'No notes'}
           </li>
         ))}
       </ul>
